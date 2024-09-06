@@ -75,11 +75,9 @@ public class EconomyManager {
         if (requiredPlugin != null) {
             if (plugin.getServer().getPluginManager().getPlugin(requiredPlugin) != null) {
                 economyProviders.put(provider.getIdentifier().toUpperCase(), provider);
-                plugin.getLogger().info("Registered economy provider '" + provider.getIdentifier() + "' using " + requiredPlugin + " plugin.");
             }
         } else {
             economyProviders.put(provider.getIdentifier().toUpperCase(), provider);
-            plugin.getLogger().info("Registered economy provider '" + provider.getIdentifier());
         }
     }
 
