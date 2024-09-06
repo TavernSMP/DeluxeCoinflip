@@ -1,4 +1,4 @@
-name: DeluxeCoinflip
+name: TavernCoinflip
 version: '${version}'
 main: net.zithium.deluxecoinflip.DeluxeCoinflipPlugin
 authors: [ ItsLewizzz, ItzSave, ItsSimplyLeo ]
@@ -7,8 +7,6 @@ api-version: 1.19
 softdepend:
   - PlaceholderAPI
   - Vault
-  - TokenEnchant
-  - TokenManager
   - EssentialsX
 
 permissions:

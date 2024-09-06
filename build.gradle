@@ -22,7 +22,6 @@ repositories {
 dependencies {
     implementation "co.aikar:acf-paper:0.5.1-SNAPSHOT"
     implementation 'dev.triumphteam:triumph-gui:3.1.10'
-    implementation 'org.bstats:bstats-bukkit:3.0.2'
 
     compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
 
@@ -30,9 +29,7 @@ dependencies {
     compileOnly 'com.mojang:authlib:1.5.21'
     compileOnly 'org.jetbrains:annotations:24.1.0'
 
-    compileOnly('com.github.Realizedd:TokenManager:3.2.4') { transitive = false }
     compileOnly 'net.milkbowl.vault:VaultAPI:1.7'
-    compileOnly 'org.black_ixx:playerpoints:3.2.6'
     compileOnly fileTree(dir: 'libs', include: '*.jar')
 }
 
@@ -58,8 +55,7 @@ processResources {
 
 shadowJar {
     minimize()
-    archiveFileName = "DeluxeCoinflip-${project.version}.jar"
+    archiveFileName = "TavernCoinflip-${project.version}.jar"
     relocate 'dev.triumphteam.gui', 'net.zithium.deluxecoinflip.libs.gui'
     relocate 'me.mattstudios.mf', 'net.zithium.deluxecoinflip.libs.command'
-    relocate 'org.bstats', 'net.zithium.deluxecoinflip.libs.metrics' // bStats
 }

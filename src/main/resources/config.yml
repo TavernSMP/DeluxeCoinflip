@@ -1,5 +1,4 @@
-# DeluxeCoinflip
-# Author: Zithium Studios
+# TavernCoinflip - fork of DeluxeCoinflip!
 # Copyright Zithium Studios D 2023. All rights reserved.
 #
 # Developer API
@@ -7,7 +6,7 @@
 
 # Should the plugin report stats to https://bstats.org/
 # All usage statistics are anonymous and has zero impact on performance.
-metrics: true
+metrics: false
 
 storage:
   # Types available:
@@ -52,7 +51,7 @@ settings:
     # TokenEnchant Economy (requires TokenEnchant plugin)
     # https://polymart.org/resource/155
     TOKENENCHANT:
-      enabled: true
+      enabled: false
       display_currency_name: "TokenEnchant"
 
     # PlayerPoints Economy (requires PlayerPoints plugin)
@@ -70,13 +69,13 @@ settings:
     # ZithiumMobcoins integration (requires ZithiumMobcoins plugin)
     # https://www.spigotmc.org/resources/113153/
     ZITHIUMMOBCOINS:
-      enabled: true
+      enabled: false
       display_currency_name: "Mobcoins"
 
     # BeastTokens Economy (requires BeastTokens plugin)
     # https://www.spigotmc.org/resources/20806/
     BEASTTOKENS:
-      enabled: true
+      enabled: false
       display_currency_name: "Tokens"
 
 

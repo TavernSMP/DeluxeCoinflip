@@ -41,12 +41,7 @@ public class EconomyManager {
         }
 
         Stream.of(
-                new VaultProvider(),
-                new TokenEnchantProvider(),
-                new TokenManagerProvider(),
-                new ZithiumMobcoinsProvider(),
-                new PlayerPointsProvider(),
-                new BeastTokensProvider()
+                new VaultProvider()
         ).forEach(provider -> registerEconomyProvider(provider, provider.getIdentifier()));
 
         Bukkit.getScheduler().runTask(plugin, () -> {

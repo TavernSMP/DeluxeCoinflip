@@ -23,7 +23,6 @@ import net.zithium.deluxecoinflip.listener.PlayerListener;
 import net.zithium.deluxecoinflip.menu.InventoryManager;
 import net.zithium.deluxecoinflip.storage.PlayerData;
 import net.zithium.deluxecoinflip.storage.StorageManager;
-import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -44,16 +43,6 @@ public class DeluxeCoinflipPlugin extends JavaPlugin implements DeluxeCoinflipAP
     private Cache<UUID, CoinflipGame> listenerCache;
 
     public void onEnable() {
-        long start = System.currentTimeMillis();
-
-        getLogger().log(Level.INFO, "");
-        getLogger().log(Level.INFO, " __ __    DeluxeCoinflip v" + getDescription().getVersion());
-        getLogger().log(Level.INFO, "/  |_     Author(s): " + getDescription().getAuthors().get(0));
-        getLogger().log(Level.INFO, "\\_ |      (c) Zithium Studios 2020-2023. All rights reserved.");
-        getLogger().log(Level.INFO, "");
-
-        enableMetrics();
-
         listenerCache = CacheBuilder.newBuilder().expireAfterWrite(30, TimeUnit.SECONDS).maximumSize(500).build();
 
         // Register configurations
@@ -95,26 +84,14 @@ public class DeluxeCoinflipPlugin extends JavaPlugin implements DeluxeCoinflipAP
         // PlaceholderAPI Hook
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new PlaceholderAPIHook(this).register();
-            getLogger().log(Level.INFO, "Hooked into PlaceholderAPI successfully");
         }
 
         Bukkit.getPluginManager().registerEvents(new PlayerListener(this), this);
 
         clearGames(false);
 
-        getLogger().log(Level.INFO, "");
-        getLogger().log(Level.INFO, "Successfully loaded in " + (System.currentTimeMillis() - start) + "ms");
-        getLogger().log(Level.INFO, "");
     }
 
-    private void enableMetrics() {
-        if (getConfig().getBoolean("metrics", true)) {
-            getLogger().log(Level.INFO, "Loading bStats metrics");
-            new Metrics(this, 20887);
-        } else {
-            getLogger().log(Level.INFO, "Metrics are disabled");
-        }
-    }
 
     @Override
     public void onDisable() {
@@ -143,7 +120,6 @@ public class DeluxeCoinflipPlugin extends JavaPlugin implements DeluxeCoinflipAP
      * @param returnMoney Should the money be returned to the game owner?
      */
     public void clearGames(boolean returnMoney) {
-        getLogger().info("Clearing all active coinflip games.");
         if (!gameManager.getCoinflipGames().isEmpty()) {
             final Map<UUID, CoinflipGame> games = gameManager.getCoinflipGames();
             final List<UUID> gamesToRemove = new ArrayList<>();
@@ -162,7 +138,6 @@ public class DeluxeCoinflipPlugin extends JavaPlugin implements DeluxeCoinflipAP
 
             storageManager.dropGames();
         }
-        getLogger().info("All coinflip games have been cleared.");
     }
 
     public StorageManager getStorageManager() {

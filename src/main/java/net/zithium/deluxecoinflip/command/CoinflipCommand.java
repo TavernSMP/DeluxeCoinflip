@@ -15,7 +15,6 @@ import net.zithium.deluxecoinflip.economy.EconomyManager;
 import net.zithium.deluxecoinflip.economy.provider.EconomyProvider;
 import net.zithium.deluxecoinflip.game.CoinflipGame;
 import net.zithium.deluxecoinflip.game.GameManager;
-import net.zithium.deluxecoinflip.storage.PlayerData;
 import net.zithium.deluxecoinflip.utility.TextUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -64,48 +63,6 @@ public class CoinflipCommand extends BaseCommand {
         if (sender.hasPermission("coinflip.admin")) Messages.HELP_ADMIN.send(sender);
     }
 
-    @Subcommand("about")
-    public void aboutSubCommand(final CommandSender sender) {
-        sender.sendMessage("");
-        sender.sendMessage(TextUtil.color("&e&lDeluxeCoinflip"));
-        sender.sendMessage(TextUtil.color("&eVersion: &fv" + plugin.getDescription().getVersion()));
-        sender.sendMessage(TextUtil.color("&eAuthor: &fItsLewizzz"));
-
-        if (!TextUtil.isValidDownload()) {
-            sender.sendMessage(TextUtil.color("&4Registered to: &cFailed to find licensed owner to this plugin. Contact developer to report possible leak (ItsLewizzz#6023)."));
-        } else if (TextUtil.isMCMarket()) {
-            sender.sendMessage(TextUtil.color("&4Registered to: &chttps://www.mc-market.org/members/%%__USER__%%/"));
-        } else {
-            sender.sendMessage(TextUtil.color("&4Registered to: &chttps://www.spigotmc.org/members/%%__USER__%%/"));
-        }
-        sender.sendMessage("");
-    }
-
-    @Subcommand("toggle")
-    public void toggleSubCommand(final CommandSender sender) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can toggle broadcast messages");
-            return;
-        }
-
-        Player player = (Player) sender;
-        java.util.Optional<PlayerData> playerDataOptional = plugin.getStorageManager().getPlayer(player.getUniqueId());
-
-        if(!playerDataOptional.isPresent()) {
-            sender.sendMessage(TextUtil.color("&cYour player data has not loaded yet, please wait a few moments or relog."));
-            return;
-        }
-
-        PlayerData playerData = playerDataOptional.get();
-        if (playerData.isDisplayBroadcastMessages()) {
-            Messages.BROADCASTS_TOGGLED_OFF.send(player);
-            playerData.setDisplayBroadcastMessages(false);
-        } else {
-            Messages.BROADCASTS_TOGGLED_ON.send(player);
-            playerData.setDisplayBroadcastMessages(true);
-        }
-    }
-
     @Subcommand("delete|remove")
     public void deleteSubCommand(final CommandSender sender) {
         if (!(sender instanceof Player)) {
@@ -152,7 +109,7 @@ public class CoinflipCommand extends BaseCommand {
         }
 
         if (amount < config.getLong("settings.minimum-bet")) {
-            Messages.CREATE_MINIMUM_AMOUNT.send(player,"{MIN_BET}", TextUtil.numberFormat(config.getLong("settings.minimum-bet")));
+            Messages.CREATE_MINIMUM_AMOUNT.send(player, "{MIN_BET}", TextUtil.numberFormat(config.getLong("settings.minimum-bet")));
             return;
         }
 
@@ -177,7 +134,7 @@ public class CoinflipCommand extends BaseCommand {
         }
 
         if (provider == null) {
-            Messages.INVALID_CURRENCY.send(player,"{CURRENCY_TYPES}", economyManager.getEconomyProviders().values().stream().map(p -> p.getDisplayName().toLowerCase()).collect(Collectors.joining(", ")));
+            Messages.INVALID_CURRENCY.send(player, "{CURRENCY_TYPES}", economyManager.getEconomyProviders().values().stream().map(p -> p.getDisplayName().toLowerCase()).collect(Collectors.joining(", ")));
             return;
         }
 
@@ -186,12 +143,12 @@ public class CoinflipCommand extends BaseCommand {
 
             final CoinflipCreatedEvent event = new CoinflipCreatedEvent(player, coinflipGame);
             Bukkit.getPluginManager().callEvent(event);
-            if(event.isCancelled()) return;
+            if (event.isCancelled()) return;
 
             provider.withdraw(player, amount);
             gameManager.addCoinflipGame(player.getUniqueId(), coinflipGame);
 
-            if(config.getBoolean("settings.broadcast-coinflip-creation")) {
+            if (config.getBoolean("settings.broadcast-coinflip-creation")) {
                 Messages.COINFLIP_CREATED_BROADCAST.broadcast("{PLAYER}", player.getName(), "{CURRENCY}", provider.getDisplayName(), "{AMOUNT}", TextUtil.numberFormat(amount));
             }
 
