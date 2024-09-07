@@ -63,7 +63,7 @@ public class CoinflipCommand extends BaseCommand {
         if (sender.hasPermission("coinflip.admin")) Messages.HELP_ADMIN.send(sender);
     }
 
-    @Subcommand("delete|remove")
+    @Subcommand("delete|remove|cancel")
     public void deleteSubCommand(final CommandSender sender) {
         if (!(sender instanceof Player)) {
             sender.sendMessage("Only players can remove a coinflip game");
