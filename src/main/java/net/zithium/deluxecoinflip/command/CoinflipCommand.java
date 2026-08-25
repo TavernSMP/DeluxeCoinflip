@@ -75,7 +75,7 @@ public class CoinflipCommand extends BaseCommand {
         if (gameManager.getCoinflipGames().containsKey(uuid)) {
             final CoinflipGame game = gameManager.getCoinflipGames().get(uuid);
 
-            economyManager.getEconomyProvider(game.getProvider()).deposit(player, game.getAmount());
+            plugin.getPayoutManager().pay(player, game.getAmount(), game.getProvider());
             gameManager.removeCoinflipGame(uuid);
             Messages.DELETED_GAME.send(player);
 

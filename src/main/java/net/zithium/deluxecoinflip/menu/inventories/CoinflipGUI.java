@@ -22,8 +22,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 
+import java.security.SecureRandom;
 import java.util.Optional;
 import java.util.Random;
+import java.util.UUID;
 
 public class CoinflipGUI implements Listener {
 
@@ -35,6 +37,13 @@ public class CoinflipGUI implements Listener {
     private final double taxRate;
     private final long minimumBroadcastWinnings;
     private static final int ANIMATION_COUNT_THRESHOLD = 12;
+
+    /**
+     * One shared, cryptographically seeded source. The previous code built a new
+     * {@code Random} per flip seeded on the current millisecond, so two flips in the same
+     * millisecond produced the same winner and the seed was guessable.
+     */
+    private static final Random RANDOM = new SecureRandom();
 
     public CoinflipGUI(@NotNull DeluxeCoinflipPlugin plugin) {
         this.plugin = plugin;
@@ -50,16 +59,36 @@ public class CoinflipGUI implements Listener {
 
     public void startGame(@NotNull Player player, @NotNull OfflinePlayer otherPlayer, CoinflipGame game) {
 
-        Messages.PLAYER_CHALLENGE.send(otherPlayer.getPlayer(), "{OPPONENT}", player.getName());
-
-        Random rand = new Random(System.currentTimeMillis());
-        OfflinePlayer winner = rand.nextBoolean() ? player : otherPlayer;
+        OfflinePlayer winner = RANDOM.nextBoolean() ? player : otherPlayer;
         OfflinePlayer loser = winner.equals(player) ? otherPlayer : player;
 
-        runAnimation(player, winner, loser, game);
+        // The stake both players put in. Used for stats, not for the payout.
+        long beforeTax = game.getAmount();
+        long winAmount = game.getAmount() * 2;
+        long taxed = 0;
+        if (taxEnabled) {
+            taxed = (long) ((taxRate * winAmount) / 100.0);
+            winAmount -= taxed;
+        }
+
+        // Reserve the payout before anything else can run or fail. Both stakes have already
+        // been withdrawn and the game row has already been deleted by the caller, so from
+        // here until the deposit the money exists nowhere else. Recording it first means a
+        // quit, crash, restart or exception during the animation can no longer destroy it.
+        UUID payoutId = plugin.getPayoutManager().escrow(winner, winAmount, game.getProvider());
+
+        // The creator is usually offline, and OfflinePlayer#getPlayer is null then. This send
+        // used to run unguarded and threw before the animation started, taking both stakes
+        // with it.
+        if (otherPlayer.isOnline()) {
+            Messages.PLAYER_CHALLENGE.send(otherPlayer.getPlayer(), "{OPPONENT}", player.getName());
+        }
+
+        runAnimation(player, winner, loser, game, payoutId, winAmount, taxed, beforeTax);
     }
 
-    private void runAnimation(Player player, OfflinePlayer winner, OfflinePlayer loser, CoinflipGame game) {
+    private void runAnimation(Player player, OfflinePlayer winner, OfflinePlayer loser, CoinflipGame game,
+                              UUID payoutId, long winAmount, long taxed, long beforeTax) {
 
         Gui gui = Gui.gui().rows(3).title(Component.text(coinflipGuiTitle)).create();
         gui.disableAllInteractions();
@@ -79,11 +108,11 @@ public class CoinflipGUI implements Listener {
             gui.open(loser.getPlayer());
         }
 
+        // Runs on the main thread. The body mutates an inventory, plays sounds and writes
+        // player stats, none of which are safe off it; only the pacing was ever asynchronous.
         new BukkitRunnable() {
             boolean alternate = false;
             int count = 0;
-            long winAmount = game.getAmount() * 2;
-            long beforeTax = winAmount / 2;
 
             @Override
             public void run() {
@@ -101,19 +130,11 @@ public class CoinflipGUI implements Listener {
                         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1L, 0L);
                     }
 
-                    long taxed = 0;
+                    // Pays now if the winner is still online, otherwise leaves the reserved
+                    // payout queued for their next join.
+                    plugin.getPayoutManager().settle(payoutId);
 
-                    if (taxEnabled) {
-                        taxed = (long) ((taxRate * winAmount) / 100.0);
-                        winAmount -= taxed;
-                    }
-
-                    // Deposit winnings synchronously
-                    Bukkit.getScheduler().runTask(plugin, () -> economyManager.getEconomyProvider(game.getProvider()).deposit(winner, winAmount));
-
-                    // Run event.
-                    Bukkit.getScheduler().runTask(plugin, () -> Bukkit.getPluginManager().callEvent(new CoinflipCompletedEvent(winner, loser, winAmount)));
-
+                    Bukkit.getPluginManager().callEvent(new CoinflipCompletedEvent(winner, loser, winAmount));
 
                     // Update player stats
                     StorageManager storageManager = plugin.getStorageManager();
@@ -133,11 +154,11 @@ public class CoinflipGUI implements Listener {
                     // Broadcast to the server
                     broadcastWinningMessage(winAmount, taxed, winner.getName(), loser.getName(), economyManager.getEconomyProvider(game.getProvider()).getDisplayName());
 
-                    //closeAnimationGUI(gui);
-
                     cancel();
+                    // cancel() does not stop the current invocation. Without this the reveal
+                    // frame below was immediately painted over by another animation frame.
+                    return;
                 }
-
 
                 // Do animation
                 if (alternate) {
@@ -172,7 +193,7 @@ public class CoinflipGUI implements Listener {
 
                 gui.update();
             }
-        }.runTaskTimerAsynchronously(plugin, 0L, 10L);
+        }.runTaskTimer(plugin, 0L, 10L);
     }
 
     private void updatePlayerStats(StorageManager storageManager, OfflinePlayer player, long winAmount, long beforeTax, boolean isWinner) {

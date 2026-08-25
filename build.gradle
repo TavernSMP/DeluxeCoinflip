@@ -53,6 +53,17 @@ processResources {
 }
 
 
+// The plain `jar` task produces an UNSHADED jar without ACF or triumph-gui bundled,
+// which fails at startup with NoClassDefFoundError. Tag it so it cannot be picked by
+// mistake, and make `build` produce the shaded jar.
+jar {
+    archiveClassifier = 'UNSHADED-DO-NOT-USE'
+}
+
+tasks.named('build') {
+    dependsOn tasks.named('shadowJar')
+}
+
 shadowJar {
     minimize()
     archiveFileName = "TavernCoinflip-${project.version}.jar"

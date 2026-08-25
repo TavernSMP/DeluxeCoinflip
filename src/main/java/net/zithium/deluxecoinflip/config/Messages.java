@@ -59,6 +59,12 @@ public enum Messages {
     }
 
     public void send(CommandSender receiver, Object... replacements) {
+        // OfflinePlayer#getPlayer returns null for an offline player, and callers pass
+        // that straight in. An unguarded send here threw mid-payout and destroyed money.
+        if (receiver == null) {
+            return;
+        }
+
         Object value = config.get(this.path);
 
         String message;

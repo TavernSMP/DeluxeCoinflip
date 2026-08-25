@@ -21,6 +21,7 @@ import net.zithium.deluxecoinflip.hook.PlaceholderAPIHook;
 import net.zithium.deluxecoinflip.listener.PlayerChatListener;
 import net.zithium.deluxecoinflip.listener.PlayerListener;
 import net.zithium.deluxecoinflip.menu.InventoryManager;
+import net.zithium.deluxecoinflip.payout.PayoutManager;
 import net.zithium.deluxecoinflip.storage.PlayerData;
 import net.zithium.deluxecoinflip.storage.StorageManager;
 import org.bukkit.Bukkit;
@@ -39,6 +40,7 @@ public class DeluxeCoinflipPlugin extends JavaPlugin implements DeluxeCoinflipAP
     private GameManager gameManager;
     private InventoryManager inventoryManager;
     private EconomyManager economyManager;
+    private PayoutManager payoutManager;
 
     private Cache<UUID, CoinflipGame> listenerCache;
 
@@ -63,6 +65,8 @@ public class DeluxeCoinflipPlugin extends JavaPlugin implements DeluxeCoinflipAP
 
         economyManager = new EconomyManager(this);
         economyManager.onEnable();
+        // Depends on the economy manager; must exist before any listener or command can owe money.
+        payoutManager = new PayoutManager(this);
         gameManager = new GameManager(this);
 
         inventoryManager = new InventoryManager();
@@ -88,8 +92,33 @@ public class DeluxeCoinflipPlugin extends JavaPlugin implements DeluxeCoinflipAP
 
         Bukkit.getPluginManager().registerEvents(new PlayerListener(this), this);
 
-        clearGames(false);
+        recoverOrphanedGames();
 
+        // A /reload re-enables the plugin without anyone rejoining, so the join handler never
+        // fires for players who are already connected and owed money.
+        payoutManager.settleOnlinePlayers();
+    }
+
+    /**
+     * Refunds games that were still open when the server last stopped.
+     *
+     * <p>Stored games are never loaded back into memory, so the old boot sequence deleted
+     * them outright and the creators' stakes were destroyed by any unclean shutdown. Shutdown
+     * now leaves the rows alone and this is the single place they are settled, which also
+     * means there is no window where the same game could be refunded twice.
+     */
+    private void recoverOrphanedGames() {
+        Map<UUID, CoinflipGame> orphaned = storageManager.getStorageHandler().getGames();
+        if (orphaned.isEmpty()) {
+            return;
+        }
+
+        orphaned.forEach((uuid, game) ->
+                payoutManager.escrow(Bukkit.getOfflinePlayer(uuid), game.getAmount(), game.getProvider()));
+        storageManager.getStorageHandler().dropGamesTable();
+
+        getLogger().info("Refunded " + orphaned.size()
+                + " coinflip game(s) that were still open when the server last stopped.");
     }
 
 
@@ -125,9 +154,11 @@ public class DeluxeCoinflipPlugin extends JavaPlugin implements DeluxeCoinflipAP
             final List<UUID> gamesToRemove = new ArrayList<>();
             for (UUID uuid : games.keySet()) {
                 CoinflipGame coinflipGame = gameManager.getCoinflipGames().get(uuid);
-                Player creator = Bukkit.getPlayer(uuid);
-                if (returnMoney && creator != null) {
-                    economyManager.getEconomyProvider(coinflipGame.getProvider()).deposit(creator, coinflipGame.getAmount());
+                if (returnMoney) {
+                    // Recorded rather than deposited. This runs during shutdown, where a
+                    // balance write may be discarded by the player-data sync, and it now also
+                    // covers offline creators, whose refund was previously skipped entirely.
+                    payoutManager.escrow(Bukkit.getOfflinePlayer(uuid), coinflipGame.getAmount(), coinflipGame.getProvider());
                 }
                 gamesToRemove.add(uuid);
                 storageManager.getStorageHandler().deleteCoinfip(uuid);
@@ -158,6 +189,10 @@ public class DeluxeCoinflipPlugin extends JavaPlugin implements DeluxeCoinflipAP
 
     public EconomyManager getEconomyManager() {
         return economyManager;
+    }
+
+    public PayoutManager getPayoutManager() {
+        return payoutManager;
     }
 
     public Cache<UUID, CoinflipGame> getListenerCache() {

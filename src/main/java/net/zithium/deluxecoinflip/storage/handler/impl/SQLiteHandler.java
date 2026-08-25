@@ -65,7 +65,6 @@ public class SQLiteHandler implements StorageHandler {
     }
 
     private synchronized void createTable() {
-        checkPre2_7_10();
         try (Connection tableConnection = getConnection();
              Statement statement = tableConnection.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" +
@@ -86,6 +85,13 @@ public class SQLiteHandler implements StorageHandler {
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Error occurred while creating database tables.", e);
         }
+
+        // Runs after the tables exist. getColumns returns nothing both for an old table
+        // missing the column and for a table that is not there yet, so running this first
+        // made every fresh database log a migration failure against a table it had not
+        // created. A new database is created with the column already present, so the check
+        // simply returns.
+        checkPre2_7_10();
     }
 
     private synchronized void checkPre2_7_10() {
