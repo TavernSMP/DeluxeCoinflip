@@ -14,6 +14,7 @@ import net.zithium.deluxecoinflip.config.Messages;
 import net.zithium.deluxecoinflip.economy.EconomyManager;
 import net.zithium.deluxecoinflip.game.CoinflipGame;
 import net.zithium.deluxecoinflip.game.GameManager;
+import net.zithium.deluxecoinflip.hook.TableCoinflipHook;
 import net.zithium.deluxecoinflip.storage.PlayerData;
 import net.zithium.deluxecoinflip.utility.ItemStackBuilder;
 import net.zithium.deluxecoinflip.utility.TextUtil;
@@ -188,10 +189,17 @@ public class GamesGUI {
                         return;
                     }
 
+                    if (!TableCoinflipHook.checkMoneyStake(player, game.getAmount())) {
+                        gui.close(player);
+                        return;
+                    }
+
                     economyManager.getEconomyProvider(game.getProvider()).withdraw(player, game.getAmount());
                     plugin.getGameManager().removeCoinflipGame(playerFromID.getUniqueId());
 
                     event.getWhoClicked().closeInventory();
+                    TableCoinflipHook.recordMoneyStake(player.getUniqueId(), game.getAmount());
+                    TableCoinflipHook.recordMoneyStake(playerFromID.getUniqueId(), game.getAmount());
                     plugin.getInventoryManager().getCoinflipGUI().startGame(player, playerFromID, game);
                 });
                 gui.addItem(guiItem);

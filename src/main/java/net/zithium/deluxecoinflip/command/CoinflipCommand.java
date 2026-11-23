@@ -15,6 +15,7 @@ import net.zithium.deluxecoinflip.economy.EconomyManager;
 import net.zithium.deluxecoinflip.economy.provider.EconomyProvider;
 import net.zithium.deluxecoinflip.game.CoinflipGame;
 import net.zithium.deluxecoinflip.game.GameManager;
+import net.zithium.deluxecoinflip.hook.TableCoinflipHook;
 import net.zithium.deluxecoinflip.utility.TextUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -41,7 +42,20 @@ public class CoinflipCommand extends BaseCommand {
     }
 
     @Default
-    public void defaultCommand(final CommandSender sender) {
+    @CommandCompletion("@players")
+    public void defaultCommand(final CommandSender sender, @Optional final String target) {
+        if (target != null) {
+            // /cf <online player> starts an item coinflip table challenge (TavernItemCoinflip).
+            // Anything else, or TavernItemCoinflip missing, answers exactly as before.
+            Player online = target.indexOf(' ') >= 0 ? null : Bukkit.getPlayerExact(target);
+            if (online != null && sender instanceof Player player && player.canSee(online)
+                    && TableCoinflipHook.available() && TableCoinflipHook.challenge(player, target)) {
+                return;
+            }
+            help(getCurrentCommandIssuer(), new String[]{target});
+            return;
+        }
+
         if (!(sender instanceof Player)) {
             sender.sendMessage("Console cannot open the coinflip GUI, use /coinflip help");
             return;
@@ -61,6 +75,22 @@ public class CoinflipCommand extends BaseCommand {
     public void helpSubCommand(final CommandSender sender) {
         Messages.HELP_DEFAULT.send(sender, "{PROVIDERS}", economyManager.getEconomyProviders().values().stream().map(p -> p.getDisplayName().toLowerCase()).collect(Collectors.joining(", ")));
         if (sender.hasPermission("coinflip.admin")) Messages.HELP_ADMIN.send(sender);
+    }
+
+    @Subcommand("accept")
+    @CommandCompletion("@players")
+    public void acceptSubCommand(final CommandSender sender, @Optional final String from) {
+        if (!(sender instanceof Player player) || !TableCoinflipHook.available() || !TableCoinflipHook.accept(player, from)) {
+            help(getCurrentCommandIssuer(), from == null ? new String[]{"accept"} : new String[]{"accept", from});
+        }
+    }
+
+    @Subcommand("deny")
+    @CommandCompletion("@players")
+    public void denySubCommand(final CommandSender sender, @Optional final String from) {
+        if (!(sender instanceof Player player) || !TableCoinflipHook.available() || !TableCoinflipHook.deny(player, from)) {
+            help(getCurrentCommandIssuer(), from == null ? new String[]{"deny"} : new String[]{"deny", from});
+        }
     }
 
     @Subcommand("delete|remove|cancel")
@@ -139,6 +169,8 @@ public class CoinflipCommand extends BaseCommand {
         }
 
         if (amount <= provider.getBalance(player)) {
+            if (!TableCoinflipHook.checkMoneyStake(player, amount)) return;
+
             CoinflipGame coinflipGame = new CoinflipGame(player.getUniqueId(), provider.getIdentifier().toUpperCase(), amount);
 
             final CoinflipCreatedEvent event = new CoinflipCreatedEvent(player, coinflipGame);

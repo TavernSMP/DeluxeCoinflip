@@ -12,6 +12,7 @@ import net.zithium.deluxecoinflip.config.Messages;
 import net.zithium.deluxecoinflip.economy.EconomyManager;
 import net.zithium.deluxecoinflip.economy.provider.EconomyProvider;
 import net.zithium.deluxecoinflip.game.CoinflipGame;
+import net.zithium.deluxecoinflip.hook.TableCoinflipHook;
 import net.zithium.deluxecoinflip.utility.ItemStackBuilder;
 import net.zithium.deluxecoinflip.utility.TextUtil;
 import dev.triumphteam.gui.guis.Gui;
@@ -137,6 +138,8 @@ public class GameBuilderGUI {
                 return;
             }
             gui.close(player);
+
+            if (!TableCoinflipHook.checkMoneyStake(player, game.getAmount())) return;
 
             final CoinflipCreatedEvent createdEvent = new CoinflipCreatedEvent(player, game);
             Bukkit.getPluginManager().callEvent(createdEvent);
